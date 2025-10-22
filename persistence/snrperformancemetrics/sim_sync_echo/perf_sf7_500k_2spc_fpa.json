@@ -1,0 +1,235 @@
+{
+  "profile": {
+    "name": "[LoRa-SIM]-SF7-500kHz-2SPC-FPA",
+    "phy_params": {
+      "spreading_factor": 7,
+      "bandwidth": 500000.0,
+      "samples_per_chip": 2
+    },
+    "frame_params": {
+      "preamble_symbol_count": 8,
+      "explicit_header": true,
+      "sync_word": 0,
+      "SYNC_WORD_LENGTH": 2,
+      "SFD_LENGTH": 2.25,
+      "HEADER_LENGTH": 2,
+      "SYNC_SECTION_LENGTH": 14.25
+    },
+    "fold_mode": "FPA",
+    "tx_sdr_params": null,
+    "rx_sdr_params": null,
+    "snr_map": [],
+    "timestamp": "2025-07-26"
+  },
+  "channel_function": "sim_channel_sync_echo",
+  "snr_points": [
+    {
+      "snr_db": -18.0,
+      "ber": null,
+      "ser": null,
+      "fer": {
+        "event_count": 401,
+        "total_trial_count": 401,
+        "p_hat": 1.0,
+        "ci_low": 0.9905112020100799,
+        "ci_high": 1.0,
+        "rel_half_width": 0.004744398994960042,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -16.0,
+      "ber": null,
+      "ser": null,
+      "fer": {
+        "event_count": 401,
+        "total_trial_count": 401,
+        "p_hat": 1.0,
+        "ci_low": 0.9905112020100799,
+        "ci_high": 1.0,
+        "rel_half_width": 0.004744398994960042,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -14.0,
+      "ber": {
+        "event_count": 11563,
+        "total_trial_count": 42693,
+        "p_hat": 0.2708406530344553,
+        "ci_low": 0.2666460184520721,
+        "ci_high": 0.27507652280729616,
+        "rel_half_width": 0.015563587409737158,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 3516,
+        "total_trial_count": 6099,
+        "p_hat": 0.5764879488440728,
+        "ci_low": 0.5640428966999802,
+        "ci_high": 0.5888367096760787,
+        "rel_half_width": 0.021504190179355058,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 398,
+        "total_trial_count": 401,
+        "p_hat": 0.9925187032418953,
+        "ci_low": 0.9782380979030613,
+        "ci_high": 0.9974524876180898,
+        "rel_half_width": 0.009679610899153823,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -12.0,
+      "ber": {
+        "event_count": 157279,
+        "total_trial_count": 1095787,
+        "p_hat": 0.14353063140920636,
+        "ci_low": 0.1428754135208309,
+        "ci_high": 0.14418834861104288,
+        "rel_half_width": 0.004573710424462571,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 51753,
+        "total_trial_count": 156541,
+        "p_hat": 0.33060348407126566,
+        "ci_low": 0.3282772711259602,
+        "ci_high": 0.33293801066950596,
+        "rel_half_width": 0.0070488360953586526,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 324,
+        "total_trial_count": 401,
+        "p_hat": 0.8079800498753117,
+        "ci_low": 0.7665776820892041,
+        "ci_high": 0.8435376967050345,
+        "rel_half_width": 0.0476249473162778,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -10.0,
+      "ber": {
+        "event_count": 817332,
+        "total_trial_count": 16507960,
+        "p_hat": 0.04951138723379509,
+        "ci_low": 0.04940684487645923,
+        "ci_high": 0.0496161392515678,
+        "rel_half_width": 0.00211359837404949,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 327759,
+        "total_trial_count": 2358280,
+        "p_hat": 0.13898222433298846,
+        "ci_low": 0.13854130689411265,
+        "ci_high": 0.13942431791096538,
+        "rel_half_width": 0.0031767048667213672,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 304,
+        "total_trial_count": 1464,
+        "p_hat": 0.20765027322404372,
+        "ci_low": 0.1876505529478686,
+        "ci_high": 0.22918019886388707,
+        "rel_half_width": 0.09999901582409715,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -8.0,
+      "ber": {
+        "event_count": 472107,
+        "total_trial_count": 28077763,
+        "p_hat": 0.01681426686306883,
+        "ci_low": 0.016766774926492756,
+        "ci_high": 0.016861891013727814,
+        "rel_half_width": 0.0028284339724610136,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 230772,
+        "total_trial_count": 4011109,
+        "p_hat": 0.0575332158762078,
+        "ci_low": 0.0573057582942057,
+        "ci_high": 0.05776152096262971,
+        "rel_half_width": 0.003960865575502137,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 27,
+        "total_trial_count": 2000,
+        "p_hat": 0.0135,
+        "ci_low": 0.009294493997659237,
+        "ci_high": 0.019570793006999862,
+        "rel_half_width": 0.3806036670126157,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -6.0,
+      "ber": {
+        "event_count": 195554,
+        "total_trial_count": 28447769,
+        "p_hat": 0.00687414187031679,
+        "ci_low": 0.0068438460393415055,
+        "ci_high": 0.006904570880271532,
+        "rel_half_width": 0.004416903380496305,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 97920,
+        "total_trial_count": 4063967,
+        "p_hat": 0.024094683839706376,
+        "ci_low": 0.023946046873946372,
+        "ci_high": 0.02424422050221417,
+        "rel_half_width": 0.006187539754649698,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 1,
+        "total_trial_count": 2000,
+        "p_hat": 0.0005,
+        "ci_low": 8.826773070546787e-05,
+        "ci_high": 0.0028268625032662124,
+        "rel_half_width": 2.7385947725607447,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -4.0,
+      "ber": {
+        "event_count": 62652,
+        "total_trial_count": 28447769,
+        "p_hat": 0.0022023519665109767,
+        "ci_low": 0.002185192892539121,
+        "ci_high": 0.0022196454811771256,
+        "rel_half_width": 0.007821771715395987,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 31294,
+        "total_trial_count": 4063967,
+        "p_hat": 0.00770035780310224,
+        "ci_low": 0.007615835427907514,
+        "ci_high": 0.007785810868440533,
+        "rel_half_width": 0.01103685340858714,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 1,
+        "total_trial_count": 2000,
+        "p_hat": 0.0005,
+        "ci_low": 8.826773070546787e-05,
+        "ci_high": 0.0028268625032662124,
+        "rel_half_width": 2.7385947725607447,
+        "conf_level": 0.95
+      }
+    }
+  ]
+}

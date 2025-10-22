@@ -1,0 +1,219 @@
+{
+  "profile": {
+    "name": "[LoRa-SIM]-SF7-500kHz-2SPC-CPA",
+    "phy_params": {
+      "spreading_factor": 7,
+      "bandwidth": 500000.0,
+      "samples_per_chip": 2
+    },
+    "frame_params": {
+      "preamble_symbol_count": 8,
+      "explicit_header": true,
+      "sync_word": 0,
+      "SYNC_WORD_LENGTH": 2,
+      "SFD_LENGTH": 2.25,
+      "HEADER_LENGTH": 2,
+      "SYNC_SECTION_LENGTH": 14.25
+    },
+    "fold_mode": "CPA",
+    "tx_sdr_params": null,
+    "rx_sdr_params": null,
+    "snr_map": [],
+    "timestamp": "2025-07-26"
+  },
+  "channel_function": "sim_channel_sync_roll",
+  "snr_points": [
+    {
+      "snr_db": -18.0,
+      "ber": null,
+      "ser": null,
+      "fer": {
+        "event_count": 401,
+        "total_trial_count": 401,
+        "p_hat": 1.0,
+        "ci_low": 0.9905112020100799,
+        "ci_high": 1.0,
+        "rel_half_width": 0.004744398994960042,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -16.0,
+      "ber": null,
+      "ser": null,
+      "fer": {
+        "event_count": 401,
+        "total_trial_count": 401,
+        "p_hat": 1.0,
+        "ci_low": 0.9905112020100799,
+        "ci_high": 1.0,
+        "rel_half_width": 0.004744398994960042,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -14.0,
+      "ber": null,
+      "ser": null,
+      "fer": {
+        "event_count": 401,
+        "total_trial_count": 401,
+        "p_hat": 1.0,
+        "ci_low": 0.9905112020100799,
+        "ci_high": 1.0,
+        "rel_half_width": 0.004744398994960042,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -12.0,
+      "ber": {
+        "event_count": 107697,
+        "total_trial_count": 925015,
+        "p_hat": 0.1164273011788998,
+        "ci_low": 0.11577527813273163,
+        "ci_high": 0.11708251006012603,
+        "rel_half_width": 0.00561394069156399,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 35100,
+        "total_trial_count": 132145,
+        "p_hat": 0.26561731431382196,
+        "ci_low": 0.2632428633665903,
+        "ci_high": 0.2680053918872942,
+        "rel_half_width": 0.008965018965362087,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 336,
+        "total_trial_count": 401,
+        "p_hat": 0.8379052369077307,
+        "ci_low": 0.7986565933912366,
+        "ci_high": 0.8707412513587176,
+        "rel_half_width": 0.0430148033407141,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -10.0,
+      "ber": {
+        "event_count": 169411,
+        "total_trial_count": 5066236,
+        "p_hat": 0.03343922391297997,
+        "ci_low": 0.033283029147004775,
+        "ci_high": 0.0335961262151417,
+        "rel_half_width": 0.004681583952900762,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 67405,
+        "total_trial_count": 723748,
+        "p_hat": 0.09313324527321665,
+        "ci_low": 0.09246586003678871,
+        "ci_high": 0.0938049495643102,
+        "rel_half_width": 0.007189105907311184,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 232,
+        "total_trial_count": 588,
+        "p_hat": 0.3945578231292517,
+        "ci_low": 0.355859772581824,
+        "ci_high": 0.43462465842258224,
+        "rel_half_width": 0.09981412257406433,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -8.0,
+      "ber": {
+        "event_count": 232615,
+        "total_trial_count": 25302718,
+        "p_hat": 0.009193281132880666,
+        "ci_low": 0.009156168309733273,
+        "ci_high": 0.0092305429845643,
+        "rel_half_width": 0.004045056044518109,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 113839,
+        "total_trial_count": 3614674,
+        "p_hat": 0.03149357314103568,
+        "ci_low": 0.03131402765369747,
+        "ci_high": 0.03167411442840085,
+        "rel_half_width": 0.0057168294796342495,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 222,
+        "total_trial_count": 2000,
+        "p_hat": 0.111,
+        "ci_low": 0.09797153726075743,
+        "ci_high": 0.12551992552405733,
+        "rel_half_width": 0.12409183902387344,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -6.0,
+      "ber": {
+        "event_count": 79137,
+        "total_trial_count": 27423137,
+        "p_hat": 0.0028857748841790054,
+        "ci_low": 0.0028657676605627082,
+        "ci_high": 0.0029059213802321107,
+        "rel_half_width": 0.006957181568378999,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 39414,
+        "total_trial_count": 3917591,
+        "p_hat": 0.010060774593366179,
+        "ci_low": 0.009962430780902516,
+        "ci_high": 0.010160079240952006,
+        "rel_half_width": 0.009822725785935715,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 73,
+        "total_trial_count": 2000,
+        "p_hat": 0.0365,
+        "ci_low": 0.029129752280474795,
+        "ci_high": 0.045647350549246665,
+        "rel_half_width": 0.22626846943523113,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -4.0,
+      "ber": {
+        "event_count": 18466,
+        "total_trial_count": 28220073,
+        "p_hat": 0.0006543569182120826,
+        "ci_low": 0.0006449898140477829,
+        "ci_high": 0.0006638599692581691,
+        "rel_half_width": 0.014418855127218412,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 9146,
+        "total_trial_count": 4031439,
+        "p_hat": 0.002268668830162133,
+        "ci_low": 0.002222698760888833,
+        "ci_high": 0.002315587450357597,
+        "rel_half_width": 0.02047206895819298,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 17,
+        "total_trial_count": 2000,
+        "p_hat": 0.0085,
+        "ci_low": 0.005313767739685553,
+        "ci_high": 0.013570689737786079,
+        "rel_half_width": 0.4857012940059133,
+        "conf_level": 0.95
+      }
+    }
+  ]
+}
