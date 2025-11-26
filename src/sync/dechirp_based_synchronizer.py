@@ -1,41 +1,12 @@
 import numpy as np
 from typing import Union, Tuple, List, Optional
 from dataclasses import dataclass, field
+import src.sync.exceptions as sync_exceptions
 
 # Constant Threshold expressions
 CFO_THRESHOLD = 0.1 
 sfo_threshold= lambda sf, spc: (1<<sf) / (1000 * spc)
 
-# ------------------------------
-# Error types (unchanged)
-# ------------------------------
-class SynchronizationError(Exception):
-    """Base class for synchronization-related errors."""
-    pass
-
-class NoCandidatesFoundError(SynchronizationError):
-    """No synchronization candidates were found."""
-    pass
-
-class SFDError(SynchronizationError):
-    """Failed to locate the downchirp pair in SFD."""
-    pass
-
-class IncompleteFrameError(SynchronizationError):
-    """IQ buffer too short to extract the body."""
-    pass
-
-class IncompleteHeaderError(IncompleteFrameError):
-    """IQ buffer too short to extract the header."""
-    pass
-
-class IncompletePayloadError(IncompleteFrameError):
-    """IQ buffer too short to extract as many payload symbols as the header indicates."""
-    pass
-
-class CandidatesExhaustedError(SynchronizationError):
-    """All candidates were exhausted without successful synchronization."""
-    pass
 
 # Backend now provides as_strided; CuPy import is optional for type hints only.
 try:
@@ -49,7 +20,7 @@ except ImportError:
 # Internal deps
 # ------------------------------
 from src.demod.demodulator import LoRaDemodulator
-from src.core.params import LoRaPhyParams, LoRaFrameParams
+from src.core.params import LoRaPhyParams, LoRaFrameParams, DechirpingSyncParams, LoRaFoldMode
 from src.core.backend import AbstractBackend, choose_backend
 
 
@@ -143,20 +114,19 @@ class DechirpBasedSynchronizer:
     def __init__(self,
                  phy_params: LoRaPhyParams,
                  frame_params: LoRaFrameParams,
+                 sync_params: DechirpingSyncParams,
                  *,
                  backend: str | AbstractBackend = "auto",
-                 fold_mode = "0FPA",
-                 max_sync_candidates: int = 2,
+                 fold_mode: LoRaFoldMode = LoRaFoldMode.CPA,
                  logging: bool = False,
-                 compensate_cfo_sfo: bool = True,
                  debug: bool = False):
         
         self.phy_params = phy_params
         self.frame_params = frame_params
         self.backend: AbstractBackend = choose_backend(backend)
-        self.max_sync_candidates = max_sync_candidates
+        self.max_sync_candidates = sync_params.max_sync_candidates
         self.logging = logging
-        self.compensate_cfo_sfo = compensate_cfo_sfo
+        self.compensate_cfo_sfo = sync_params.compensate_frequency_offset
         self.debug = debug
 
         self.demod = LoRaDemodulator(
@@ -248,7 +218,7 @@ class DechirpBasedSynchronizer:
                 ))
 
         if not candidates:
-            raise NoCandidatesFoundError("No preamble candidates found.")
+            raise sync_exceptions.NoCandidatesFoundError("No preamble candidates found.")
 
         # Normalize run scores 
         run_scores = np.array([c.run_score for c in candidates])
@@ -287,7 +257,7 @@ class DechirpBasedSynchronizer:
         preamble_samples = self.frame_params.preamble_symbol_count * self.phy_params.samples_per_symbol
         preamble_segment = synced[:preamble_samples]
         if len(preamble_segment) < self.phy_params.samples_per_symbol:
-            raise SynchronizationError("Preamble segment is too short for CFO/SFO estimation.")
+            raise sync_exceptions.SynchronizationError("Preamble segment is too short for CFO/SFO estimation.")
 
         syms, deltas = self.demod.demodulate(preamble_segment, base="downchirp", return_items=["symbols", "deltas"])
         x = np.arange(len(syms.get() if hasattr(syms, "get") else syms))
@@ -380,7 +350,7 @@ class DechirpBasedSynchronizer:
             up_syms, up_peaks, down_syms, down_peaks
         )
         if sfd_end_offset == -1:
-            raise SFDError("Failed to locate the downchirp pair in SFD.")
+            raise sync_exceptions.SFDError("Failed to locate the downchirp pair in SFD.")
         self._log("run", f"Downchirp pair found up to index {sfd_end_offset - 1}")
         return sfd_end_offset
 
@@ -439,7 +409,7 @@ class DechirpBasedSynchronizer:
                 sps = self.phy_params.samples_per_symbol
                 header = body[:2 * sps]
                 if len(header) < 2 * sps:
-                    raise IncompleteHeaderError("IQ buffer too short to extract the header.")
+                    raise sync_exceptions.IncompleteHeaderError("IQ buffer too short to extract the header.")
                 
                 # 6) Header demodulation: Payload length decoding
                 self._log("run", f"Header length: {len(header)} samples. Starts at {sfd_end_offset} samples from sync_offset {sync_offset}.")
@@ -457,7 +427,7 @@ class DechirpBasedSynchronizer:
                 trace.available_samples = available_samples
                 self._log("run", f"Needed {needed_samples} samples, available {available_samples} samples in the body.")
                 if needed_samples > available_samples:
-                    raise IncompletePayloadError("IQ buffer too short to extract as many payload symbols as the header indicates.")
+                    raise sync_exceptions.IncompletePayloadError("IQ buffer too short to extract as many payload symbols as the header indicates.")
 
                 # 7) Payload extraction
                 frame_samples = self.frame_params.HEADER_LENGTH * sps
@@ -512,7 +482,7 @@ class DechirpBasedSynchronizer:
                 continue
 
         # All candidates failed
-        exc = CandidatesExhaustedError("All candidates were exhausted without successful synchronization.")
+        exc = sync_exceptions.CandidatesExhaustedError("All candidates were exhausted without successful synchronization.")
         if self.debug:
             setattr(exc, "traces", traces)  # attach for post-mortem use
         raise exc

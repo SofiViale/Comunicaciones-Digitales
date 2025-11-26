@@ -11,7 +11,7 @@ only a small module-level cache is used for base chirps.
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, Tuple
+from typing import Any, Tuple, List
 import numpy as np  # we need pi regardless of backend
 
 from src.core.params import LoRaPhyParams
@@ -185,7 +185,76 @@ def instantaneous_frequency(
 # 4.  Phase → complex64 helper
 # ---------------------------------------------------------------
 
-
 def to_complex(xp: Any, phase, coef: float = 1.0):
     """Convert real phase vector → complex baseband samples (complex64)."""
     return (coef * xp.exp(1j * phase)).astype(xp.complex64, copy=False)
+
+# ---------------------------------------------------------------
+# 5. Utility to test Phase-Alignment
+# ---------------------------------------------------------------
+def locate_discontinuity_indices(
+    symbols: "list[int | LoRaMarkers]",
+    phy: LoRaPhyParams,
+) -> Tuple[List[int], List[int]]:
+    """
+    Finds sample indices of frequency discontinuities in a LoRa symbol stream.
+
+    This function locates discontinuities at symbol boundaries (with specific
+    transitions excluded) and intra-symbol phase wraps caused by frequency
+    rollovers in data up-chirps.
+
+    :param symbols: The complete sequence of symbols to be analyzed.
+    :type symbols: list[int | LoRaMarkers]
+    :param phy: The physical layer parameters object.
+    :type phy: LoRaPhyParams
+    :returns: A tuple containing two lists: the first for boundary
+              discontinuity indices, the second for intra-symbol indices.
+    :rtype: Tuple[List[int], List[int]]
+    """
+    boundary_indices = []
+    intra_symbol_indices = []
+    
+    current_sample = 0
+    sps = phy.samples_per_symbol
+    spc = phy.samples_per_chip
+    cps = phy.chips_per_symbol
+
+    # For each symbol in the stream
+    for i, sym in enumerate(symbols):
+        # Check if there are boundary discontinuities
+        if i > 0:
+            prev_sym = symbols[i - 1]
+            
+            # Rule 1: Exclude if symbols are identical, UNLESS they are 0 or a standard up-chirp.
+            rule1_exclude = (prev_sym == sym) and (sym not in (0, LoRaMarkers.FULL_UPCHIRP))
+
+            # Rule 2: Exclude the up-chirp to down-chirp transition in the SFD.
+            is_prev_up = isinstance(prev_sym, LoRaMarkers) and prev_sym.slope_sign == 1
+            is_curr_down = isinstance(sym, LoRaMarkers) and sym.slope_sign == -1
+            rule2_exclude = is_prev_up and is_curr_down
+
+            # Rule 3: Exclude if data symbols are "near" each other (uses circular distance).
+            rule3_exclude = False
+            if isinstance(prev_sym, int) and isinstance(sym, int):
+                threshold = 2  # Define what "near" means. Ex: ignore jumps of 1 symbol.
+                diff = abs(sym - prev_sym)
+                distance = min(diff, cps - diff)
+
+                if distance < threshold:
+                    rule3_exclude = True
+
+            if not (rule1_exclude or rule2_exclude or rule3_exclude):
+                boundary_indices.append(current_sample)
+                
+        # Check if there are intra-symbol discontinuities
+        if isinstance(sym, (int, np.int64)) and sym > 0 and spc >= 2:
+            k_discontinuity = int(spc * (cps - sym)) + 1
+            if k_discontinuity < sps:
+                intra_symbol_indices.append(current_sample + k_discontinuity)
+
+        samples_in_sym = (
+            int(sym.duration_factor * sps) if isinstance(sym, LoRaMarkers) else sps
+        )
+        current_sample += samples_in_sym
+
+    return boundary_indices, intra_symbol_indices

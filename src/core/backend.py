@@ -93,9 +93,9 @@ class AbstractBackend(ABC):
     xp: Any
 
     # ................................................................. FFT
-    def fft(self, arr, *, axis: int = -1, plan=None):  # noqa: D401
+    def fft(self, arr, *, axis: int = -1, plan=None, n=None):  # noqa: D401
         """FFT wrapper.  *plan* is ignored by CPU back-ends."""
-        return self.xp.fft.fft(arr, axis=axis)
+        return self.xp.fft.fft(arr, axis=axis, n=n)
 
     # ................................................................. plans
     def plan_fft(self, n: int, /, *, batch: int = 1):  # noqa: D401
@@ -204,13 +204,13 @@ class CupyBackend(AbstractBackend):
         self._PLAN_CACHE[key] = plan
         return plan
     # ----------------------------- fft-------------------------------------
-    def fft(self, arr, *, axis: int = -1):
+    def fft(self, arr, *, axis: int = -1, n=None):
         """
         Execute 1-D FFT along *axis* using this backend’s stream
         and an optional cuFFT *plan*.
         """
         with self._stream:
-            return self._fft_mod.fft(arr, axis=axis)
+            return self._fft_mod.fft(arr, axis=axis, n=n)
 
     def clear_memory(self):
         xp = self.xp

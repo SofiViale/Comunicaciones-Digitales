@@ -20,6 +20,7 @@ from src.core.primitives import (
     instantaneous_phase,
     to_complex,
     instantaneous_frequency,
+    locate_discontinuity_indices
 )
 
 Symbol = Union[int, LoRaMarkers]
@@ -38,7 +39,6 @@ class LoRaModulator:
     :type  enable_logging: bool
     """
 
-    # ------------------------------------------------------------------
     def __init__(
         self,
         phy_params: LoRaPhyParams,
@@ -55,13 +55,13 @@ class LoRaModulator:
         self.xp = self.backend.xp
         self._log_enabled = enable_logging
 
-        # --- constants -------------------------------------------------
         F = self.xp.float64
         self._coef = F(1.0) / self.xp.sqrt(
             F(phy_params.chips_per_symbol * phy_params.samples_per_chip)
         )
 
-        # cached building blocks
+        self._data_symbol_base = self._precompute_data_base()
+
         self._preamble_markers: List[LoRaMarkers] = [
             LoRaMarkers.FULL_UPCHIRP for _ in range(self.frame_params.preamble_symbol_count)
         ]
@@ -72,14 +72,16 @@ class LoRaModulator:
             LoRaMarkers.QUARTER_DOWNCHIRP,
         ]
 
-    # ------------------------------------------------------------------ helpers
     def _log(self, msg: str) -> None:
         if self._log_enabled:
             print(f"[LoRaMod] {msg}")
 
-    # .................................................................
+    def _precompute_data_base(self) -> Any:
+        """Generates two concatenated base up-chirps (symbol 0) for fast slicing."""
+        phase_0 = instantaneous_phase(self.xp, [0, 0], self.phy_params)
+        return to_complex(self.xp, phase_0, self._coef)
+
     def _encode_length(self, length_sym: int) -> List[int]:
-        """Map *payload length* to **two** SF-bit symbols ``[hi, lo]``."""
         sf = self.phy_params.spreading_factor
         if length_sym >= (1 << (2 * sf)):
             raise ValueError("Payload too long for current SF")
@@ -88,7 +90,6 @@ class LoRaModulator:
         hi = (length_sym >> sf) & mask
         return [hi, lo]
 
-    # .................................................................
     def _build_symbol_stream(
         self,
         payload: Sequence[Symbol],
@@ -96,7 +97,6 @@ class LoRaModulator:
         include_frame: bool,
         explicit_header: bool,
     ) -> List[Symbol]:
-        """Assemble full transmission symbol sequence."""
         if not include_frame:
             return list(payload)
 
@@ -104,95 +104,153 @@ class LoRaModulator:
         if explicit_header and self.frame_params.explicit_header:
             header = self._encode_length(len(payload))
 
-
-
         return (
             self._preamble_markers
             + self._sync_word
             + self._sfd_markers
-            + header 
+            + header
             + list(payload)
         )
 
-    # .................................................................
-    def _mod_single_symbol(self, sym: Symbol):
-        """Return complex64 array for *one* symbol/marker."""
-        if isinstance(sym, LoRaMarkers):
-            return generate_base_chirp(
-                self.xp,
-                self.phy_params,
-                slope=sym.slope_sign,
-                duration_factor=sym.duration_factor,
+    def _mod_marker_symbol(self, sym: LoRaMarkers) -> Any:
+        """Return complex64 array for one LoRaMarkers instance."""
+        return generate_base_chirp(
+            self.xp,
+            self.phy_params,
+            slope=sym.slope_sign,
+            duration_factor=sym.duration_factor,
+        )
+
+    def modulate(
+        self,
+        payload: Sequence[Symbol],
+        *,
+        legacy: bool = False,
+        debug_bundle: bool = False,
+        include_frame: bool = True,
+        explicit_header: bool | None = None
+    ):
+        """
+        Modulate a sequence of LoRa symbols into a complex baseband waveform.
+
+        This method acts as a router to select between a legacy, formula-based
+        modulator and a faster, buffer-based optimized version.
+
+        :param payload: Sequence of symbols to modulate.
+        :type payload: Sequence[Symbol]
+        :param legacy: If `True`, use the original formula-based modulation method.
+                       Defaults to `False`, using the optimized method.
+        :type legacy: bool, optional
+        :param debug_bundle: If `True`, return a dictionary of debug information.
+        :type debug_bundle: bool, optional
+        :param include_frame: If `True`, prepend the preamble, sync word, and SFD.
+        :type include_frame: bool, optional
+        :param explicit_header: Override the use of an explicit header.
+        :type explicit_header: bool or None, optional
+        :returns: Waveform array, or a tuple of (waveform, debug_info).
+        """
+        if legacy:
+            return self._legacy_modulate(
+                payload,
+                debug_bundle=debug_bundle,
+                include_frame=include_frame,
+                explicit_header=explicit_header
+            )
+        else:
+            return self._optimized_modulate(
+                payload,
+                debug_bundle=debug_bundle,
+                include_frame=include_frame,
+                explicit_header=explicit_header
             )
 
-        # Plain integer → standard up-chirp of full duration
-        phase = instantaneous_phase(self.xp, [int(sym)], self.phy_params)
-        return to_complex(self.xp, phase, self._coef)
-
-    # ------------------------------------------------------------------ public
-    def modulate(
+    def _legacy_modulate(
         self,
         payload: Sequence[Symbol],
         *,
         debug_bundle: bool = False,
         include_frame: bool = True,
-        explicit_header: bool | None = None,
+        explicit_header: bool | None = None
     ):
-        """
-        Modulate a sequence of LoRa symbols into a complex baseband waveform.
-
-        This method converts a list of symbols (integers or markers) into a 
-        discrete-time complex waveform representing LoRa-modulated I/Q samples. 
-        Optionally includes a LoRa-compatible preamble, sync word, SFD, and explicit 
-        header.
-
-        When ``debug_bundle`` is enabled, it also returns auxiliary diagnostics 
-        including instantaneous frequency and frame section boundaries.
-
-        :param payload: Sequence of symbols to modulate. Symbols may be integers 
-                        (for data) or :class:`LoRaMarkers` (for control).
-        :type payload: Sequence[Symbol]
-
-        :param debug_bundle: If ``True``, return a dictionary of debug information 
-                             alongside the waveform.
-        :type debug_bundle: bool, optional
-
-        :param include_frame: If ``True``, prepend the preamble, sync word, SFD, and 
-                              optionally the explicit header.
-        :type include_frame: bool, optional
-
-        :param explicit_header: Override the use of an explicit header (2-symbol 
-                                length field). If ``None``, uses the frame default.
-        :type explicit_header: bool or None, optional
-
-        :returns: 
-            - waveform (complex64 array): Modulated signal.
-            - debug_info (dict): Only if ``debug_bundle`` is ``True``. Contains keys:
-                ``"signal"``, ``"instantaneous_frequency"``, ``"time_axis"``, and 
-                frame section boundaries like ``"preamble_end"``, etc.
-        :rtype: tuple[Array, dict] or Array
-        """
+        """Original modulation method: generates and concatenates each symbol individually."""
         if explicit_header is None:
             explicit_header = self.frame_params.explicit_header
 
-        # 1 ─ Build full symbol sequence ---------------------------------
         symbols: List[Symbol] = self._build_symbol_stream(
             payload,
             include_frame=include_frame,
             explicit_header=explicit_header,
         )
 
-        self._log(f"Generating {len(symbols)} symbols (backend={self.backend.name})")
+        self._log(f"Generating {len(symbols)} symbols (legacy backend={self.backend.name})")
 
-        # 2 ─ Concatenate waveforms --------------------------------------
-        parts = [self._mod_single_symbol(s) for s in symbols]
+        def _mod_single_symbol(sym: Symbol):
+            if isinstance(sym, LoRaMarkers):
+                return self._mod_marker_symbol(sym)
+            phase = instantaneous_phase(self.xp, [int(sym)], self.phy_params)
+            return to_complex(self.xp, phase, self._coef)
+
+        parts = [_mod_single_symbol(s) for s in symbols]
         sig = self.xp.concatenate(parts)
 
-        # 3a ─ Fast path --------------------------------------------------
         if not debug_bundle:
             return sig.astype(self.xp.complex64, copy=False)
-        
-        # 3b ─ Full diagnostics bundle -----------------------------------
+
+        # Full diagnostics bundle generation
+        return self._create_debug_bundle(sig, symbols, payload, include_frame, explicit_header)
+
+    def _optimized_modulate(
+        self,
+        payload: Sequence[Symbol],
+        *,
+        debug_bundle: bool = False,
+        include_frame: bool = True,
+        explicit_header: bool | None = None
+    ):
+        """Optimized modulation method: pre-allocates and fills a buffer using views."""
+        if explicit_header is None:
+            explicit_header = self.frame_params.explicit_header
+
+        symbols: List[Symbol] = self._build_symbol_stream(
+            payload,
+            include_frame=include_frame,
+            explicit_header=explicit_header,
+        )
+
+        self._log(f"Generating {len(symbols)} symbols (optimized backend={self.backend.name})")
+
+        sps = self.phy_params.samples_per_symbol
+        total_samples = sum(
+            int(s.duration_factor * sps) if isinstance(s, LoRaMarkers) else sps
+            for s in symbols
+        )
+        sig = self.xp.empty(total_samples, dtype=self.xp.complex64)
+
+        current_pos = 0
+        spc = self.phy_params.samples_per_chip
+
+        for sym in symbols:
+            if isinstance(sym, LoRaMarkers):
+                waveform = self._mod_marker_symbol(sym)
+                end_pos = current_pos + len(waveform)
+                sig[current_pos:end_pos] = waveform
+            else:
+                shift_samples = int(sym) * spc
+                start_index = shift_samples
+                end_index = start_index + sps
+                end_pos = current_pos + sps
+                sig[current_pos:end_pos] = self._data_symbol_base[start_index:end_index]
+
+            current_pos = end_pos
+
+        if not debug_bundle:
+            return sig.astype(self.xp.complex64, copy=False)
+
+        # Full diagnostics bundle generation
+        return self._create_debug_bundle(sig, symbols, payload, include_frame, explicit_header)
+
+    def _create_debug_bundle(self, sig, symbols, payload, include_frame, explicit_header):
+        """Helper to generate the diagnostic dictionary."""
         t = self.xp.arange(sig.size, dtype=self.xp.float32) * self.phy_params.sample_duration
         freq = instantaneous_frequency(self.xp, symbols, self.phy_params)
 
@@ -224,32 +282,37 @@ class LoRaModulator:
                     "header_end":   hdr_end,
                 },
             })
-        return sig.astype(self.xp.complex64, copy=False), bundle 
+        return sig.astype(self.xp.complex64, copy=False), bundle
+
+    def locate_discontinuities(
+            self,
+            payload: Sequence[Symbol],
+            *,
+            include_frame: bool = True,
+            explicit_header: bool | None = None,
+        ):
+        if explicit_header is None:
+            explicit_header = self.frame_params.explicit_header
+
+        symbols: List[Symbol] = self._build_symbol_stream(
+            payload,
+            include_frame=include_frame,
+            explicit_header=explicit_header,
+        )
+        return locate_discontinuity_indices(symbols, self.phy_params)
 
     def generate_sync_base(self):
         """
-        Generate the synchronization base for the given PHY and frame parameters.
-
-        This method constructs the base sequence used for synchronization, which
-        includes the preamble markers, sync word, and SFD markers.
-        
-        :returns: The generated synchronization base as a complex64 array.
-        :rtype: np.ndarray
+        Generates the synchronization base (preamble, sync word, SFD).
         """
-        # Assemble the full symbol sequence for the sync base
-        symbols = self._build_symbol_stream(
+        return self.modulate(
             payload=[],
+            legacy=False, # Always use the fast method for this fixed sequence
             include_frame=True,
-            explicit_header=False,  # No header in sync base
+            explicit_header=False,
         )
-        
-        # Modulate the symbols into a complex waveform
-        waveform = self.xp.concatenate([self._mod_single_symbol(s) for s in symbols])
-        
-        return waveform.astype(self.xp.complex64, copy=False)
 
-    # ------------------------------------------------------------------
-    def __repr__(self) -> str:  # noqa: D401
+    def __repr__(self) -> str:
         return (
             f"LoRaModulator(SF={self.phy_params.spreading_factor}, "
             f"BW={self.phy_params.bandwidth/1e3:.0f}kHz, SPC={self.phy_params.samples_per_chip}, "

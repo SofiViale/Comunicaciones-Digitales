@@ -174,31 +174,45 @@ class PersistenceManager:
         self.base_dir = base_dir.resolve()
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
-    def save(self, obj: Any, *, filename: Optional[str], namer: Callable[[Any], str]) -> Path:
+    def _resolve_path(self, filename: str | Path) -> Path:
+        """Resuelve un nombre de archivo a una ruta completa con sufijo .json."""
+        path = Path(filename)
+        if path.suffix != ".json":
+            path = path.with_suffix(".json")
+        
+        # Asume que el path es relativo al base_dir
+        return self.base_dir / path
+
+    def save(self, obj: Any, *, 
+             filename: Optional[str | Path] = None, 
+             namer: Optional[Callable[[Any], str | Path]] = None) -> Path:
+        
         if filename is None:
             if namer is None:
-                raise ValueError("filename or namer must be provided")
+                raise ValueError("filename o namer debe ser provisto")
             filename = namer(obj)
-        if not filename.endswith(".json"):
-            filename += ".json"
-        path = self.base_dir / filename
-        path.parent.mkdir(parents=True, exist_ok=True)  # <-- FIX: ensure parent dirs exist
+        
+        path = self._resolve_path(filename)
+        path.parent.mkdir(parents=True, exist_ok=True) # <-- Correcto!
+        
         with path.open("w", encoding="utf-8") as f:
             json.dump(obj.to_dict(), f, indent=2)
         return path
 
 
-    def load(self, filename: str, from_dict: Callable[[dict], T]) -> T:
-        if not filename.endswith(".json"):
-            filename += ".json"
-        path = self.base_dir / filename
+    def load(self, filename: str | Path, from_dict: Callable[[dict], T]) -> T:
+        path = self._resolve_path(filename)
+        
+        if not path.exists():
+            raise FileNotFoundError(f"Archivo no encontrado en: {path}")
+
         with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
         return from_dict(data)
 
     def list(self) -> list[str]:
-        return [p.stem for p in self.base_dir.glob("*.json")]
-
+        return [p.stem for p in self.base_dir.glob("**/*.json")] 
+    
 # --------- Tiny per-class cache -------------
 _PM_CACHE: dict[Type, PersistenceManager] = {}
 

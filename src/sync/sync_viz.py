@@ -19,7 +19,7 @@ def plot_synchronization(debug_bundle: Dict[str, Any], *, pad_samples:int = None
     sps = phy.samples_per_symbol
 
 
-    # Compute absolute segment boundares (in samples)
+    # Compute absolute segment boundaries (in samples)
     pre_start = debug_bundle["preamble_start_offset"]
     sync_start = debug_bundle["sync_word_start_offset"]
     sfd_start = debug_bundle["sfd_start_offset"]

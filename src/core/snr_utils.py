@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Tuple, Dict, Any, Optional, List, Dict
 
 from src.core.sdr_utils import SDRParams
-from src.core.params import LoRaPhyParams, LoRaFrameParams
+from src.core.params import LoRaPhyParams, LoRaFrameParams, LoRaSyncParams, LoRaFoldMode
 
 import json
 from pathlib import Path
@@ -235,7 +235,6 @@ def estimate_snr_from_ls_fit_segmented(
         return float("inf")
     return 10.0 * np.log10(sum_Ps / sum_Pn)
 
-
 #-------------------------------------------------------
 # SDR Profile and SNR utilities
 #-------------------------------------------------------
@@ -276,11 +275,12 @@ def _slug(s: str) -> str:
     return re.sub(r'[^0-9A-Za-z_-]+', '_', s).strip('_')
 
 @dataclass
-class SDRProfile:
+class LoRaProfile:
     name: str
     phy_params: LoRaPhyParams
     frame_params: LoRaFrameParams
-    fold_mode: str
+    sync_params: LoRaSyncParams
+    fold_mode: LoRaFoldMode
 
     tx_sdr_params: Optional[SDRParams] = None
     rx_sdr_params: Optional[SDRParams] = None
@@ -318,6 +318,7 @@ class SDRProfile:
             "name": self.name,
             "phy_params": self.phy_params.to_dict(),
             "frame_params": self.frame_params.to_dict(),
+            "sync_params": self.sync_params.to_dict(),
             "fold_mode": self.fold_mode,
             "tx_sdr_params": self.tx_sdr_params.to_dict() if self.tx_sdr_params else None,
             "rx_sdr_params": self.rx_sdr_params.to_dict() if self.rx_sdr_params else None,
@@ -358,7 +359,7 @@ class SDRProfile:
         Example: 'profile_20250725_31_32_sf7_bw125k_spc1_FPA'
         Optionally include the human 'name' field, slugged.
         """
-        parts = ["profile", self.date_tag, self.device_tag, self.spec_tag]
+        parts = ["profile", self.date_tag]
         if include_name and self.name:
             parts.append(_slug(self.name))
         return "_".join(parts)
@@ -370,10 +371,10 @@ class SDRProfile:
 
     def save(self, filename: str | None = None) -> Path:
         pm = get_class_persistence_manager(type(self))
-        return pm.save(self, filename=filename, namer=SDRProfile.auto_name)
+        return pm.save(self, filename=filename, namer=LoRaProfile.auto_name)
     
     @classmethod
-    def load(cls, filename: str) -> 'SDRProfile':
+    def load(cls, filename: str) -> 'LoRaProfile':
         pm = get_class_persistence_manager(cls)
         return pm.load(filename, from_dict=cls.from_dict)
 
@@ -384,10 +385,11 @@ class SDRProfile:
         return pm.list()
 
     @staticmethod
-    def from_dict(data: dict) -> 'SDRProfile':
+    def from_dict(data: dict) -> 'LoRaProfile':
         """Create an SDRProfile instance from a dictionary."""
         phy_params = LoRaPhyParams.from_dict(data["phy_params"])
         frame_params = LoRaFrameParams.from_dict(data["frame_params"])
+        sync_params = LoRaSyncParams.from_dict(data["sync_params"])
 
         tx_sdr_params = SDRParams.from_dict(data["tx_sdr_params"]) if data.get("tx_sdr_params") else None
         rx_sdr_params = SDRParams.from_dict(data["rx_sdr_params"]) if data.get("rx_sdr_params") else None
@@ -399,11 +401,12 @@ class SDRProfile:
         else:
             snr_map = []
 
-        return SDRProfile(
+        return LoRaProfile(
             name=data["name"],
             phy_params=phy_params,
             frame_params=frame_params,
-            fold_mode=data["fold_mode"],
+            sync_params=sync_params,
+            fold_mode=LoRaFoldMode(data["fold_mode"]),
             tx_sdr_params=tx_sdr_params,
             rx_sdr_params=rx_sdr_params,
             snr_map=snr_map,
@@ -435,7 +438,7 @@ def linear_regression(x, y) -> Tuple[float, float]:
     m, b = np.linalg.lstsq(A, y, rcond=None)[0]
     return m, b
 
-def plot_profile_snr_map(profiles: SDRProfile | list[SDRProfile], show_regression: bool = True):
+def plot_profile_snr_map(profiles: LoRaProfile | list[LoRaProfile], show_regression: bool = True):
     """
     Plot attenuation vs SNR (mean) for one or multiple SDRProfiles.
 

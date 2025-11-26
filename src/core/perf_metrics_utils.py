@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from src.core.snr_utils import SDRProfile
+from src.core.snr_utils import LoRaProfile
 from src.core.misc_utils import get_class_persistence_manager
 from pathlib import Path
 from typing import List, Tuple, Optional
@@ -148,7 +148,7 @@ class SNRPerformanceMetrics:
     Holds a list of SNRPointPerformanceMetrics for each SNR point.
     Also includes the SDR profile used for these metrics.
     """
-    profile: SDRProfile
+    profile: LoRaProfile
     snr_points: list[SNRPointPerformanceMetrics]
     channel_function:str = "unknown"
 
@@ -184,7 +184,7 @@ class SNRPerformanceMetrics:
     @staticmethod
     def from_dict(data: dict) -> 'SNRPerformanceMetrics':
         """Create a SNRPerformanceMetrics instance from a dictionary."""
-        profile = SDRProfile.from_dict(data["profile"])
+        profile = LoRaProfile.from_dict(data["profile"])
         snr_points = [SNRPointPerformanceMetrics.from_dict(pt) for pt in data["snr_points"]]
         return SNRPerformanceMetrics(
             profile=profile,
@@ -232,14 +232,22 @@ def annotate_perf_metadata(snr_metrics, ax: plt.Axes, location='lower left', fon
     tx = profile.get("tx_sdr_params")
     rx = profile.get("rx_sdr_params")
 
-    if tx or rx:
+    if (tx and rx) and tx.get("uri") and ((tx.get("uri") == rx.get("uri"))):
         uri = tx.get("uri") if tx else rx.get("uri")
         sr = tx.get("sample_rate") if tx else rx.get("sample_rate")
         lo = tx.get("lo_freq") if tx else rx.get("lo_freq")
-        lines.append(f"SDR: {uri}")
-        lines.append(f"Rate: {sr/1e6:.2f} MSps")
+        lines.append(f"Tx&Rx SDR: {uri}")
         lines.append(f"LO: {lo/1e6:.3f} MHz")
         lines.append("")
+    else:
+        if tx and tx.get("uri"):
+            lines.append(f"Tx SDR: {tx.get('uri')}")
+            lines.append(f"LO: {tx.get('lo_freq', 0)/1e6:.3f} MHz")
+            lines.append("")
+        if rx and rx.get("uri"):
+            lines.append(f"Rx SDR: {rx.get('uri')}")
+            lines.append(f"LO: {rx.get('lo_freq', 0)/1e6:.3f} MHz")
+            lines.append("")
 
     # Linear fit for SNR mapping (if exists)
     snr_map = profile.get("snr_map", [])

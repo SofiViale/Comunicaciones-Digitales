@@ -9,7 +9,7 @@ demodulation, and synchronization subsystems.
 
 from .backend import choose_backend
 
-from .params import LoRaPhyParams, LoRaFrameParams
+from .params import LoRaPhyParams, LoRaFrameParams, LoRaSyncParams, SyncSource, DechirpingSyncParams, CorrelationSyncParams
 from .markers import LoRaMarkers
 
 from .primitives import (

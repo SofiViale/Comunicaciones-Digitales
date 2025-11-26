@@ -1,49 +1,68 @@
 from __future__ import annotations
 from typing import Any, Tuple
 from dataclasses import dataclass
-from src.core.backend   import choose_backend, AbstractBackend     # xp, fft, plan
+from src.core.backend   import choose_backend, AbstractBackend
 from src.core.primitives import generate_base_chirp
-from src.core.params    import LoRaPhyParams
+from src.core.params    import LoRaPhyParams, LoRaFoldMode
 from src.core.markers   import LoRaMarkers
 
 
-K_PHIS = 16  # number of phases for FPA folding
+K_PHIS = 16
 
-def fold_fpa(xp, fft_, first, last):
+def fold_fpa(xp, fft_, first, last, debug=False):
     """
     Full Phase Alignment (FPA) folding via brute-force phase search.
-
-    For each symbol, tries K_PHIS different rotations of the second half
-    and keeps the one that maximizes the peak magnitude after addition.
-
-    :param xp: NumPy or CuPy module (for CPU/GPU compatibility).
-    :type xp: module
-    :param fft_: Input FFT array of shape (..., spc * chips).
-    :type fft_: xp.ndarray
-    :param first: Slice to extract first chip segment.
-    :param last: Slice to extract last chip segment.
-    :param chips: Number of chips per symbol.
-
-    :return: Phase-aligned folded FFT of shape (..., chips).
-    :rtype: xp.ndarray
     """
-    a = fft_[..., first]                      # (..., chips)
-    b = fft_[..., last]                       # (..., chips)
+    a = fft_[..., first]
+    b = fft_[..., last]
 
-    phis = xp.linspace(0.0, 2 * xp.pi, K_PHIS, endpoint=False, dtype=a.dtype)  # (K,)
-    phasors = xp.exp(1j * phis)               # (K,)
+    phis = xp.linspace(0.0, 2 * xp.pi, K_PHIS, endpoint=False, dtype=a.dtype)
+    phasors = xp.exp(1j * phis)
 
-    # Compute all possible combinations
-    folded_all = a[..., None, :] + b[..., None, :] * phasors[None, :, None]  # (..., K, chips)
+    folded_all = a[..., None, :] + b[..., None, :] * phasors[None, :, None]
 
-    # Criterion: maximum peak magnitude per candidate
-    mags = xp.abs(folded_all)                 # (..., K, chips)
-    peak_mags = xp.max(mags, axis=-1)         # (..., K)
-    best_idx = xp.argmax(peak_mags, axis=-1)  # (...)
+    mags = xp.abs(folded_all)
+    peak_mags = xp.max(mags, axis=-1)
+    best_idx = xp.argmax(peak_mags, axis=-1)
 
-    # Best rotation per symbol
-    phi_opt = phis[best_idx]                  # (...)
-    folded = a + b * xp.exp(1j * phi_opt[..., None])  # (..., chips)
+    phi_opt = phis[best_idx]
+
+    if debug:
+        import numpy as np
+        if xp.__name__ == 'cupy':
+            phi_opt_np = phi_opt.get()
+            peak_mags_np = peak_mags.get()
+            phis_np = phis.get()
+        else: 
+            phi_opt_np = phi_opt
+            peak_mags_np = peak_mags
+            phis_np = phis
+        
+        phi_opt_squeezed = np.squeeze(phi_opt_np)
+        peak_mags_squeezed = np.squeeze(peak_mags_np)
+
+        phi_opt_final = np.atleast_1d(phi_opt_squeezed)
+        peak_mags_final = np.atleast_2d(peak_mags_squeezed)
+
+        num_symbols = peak_mags_final.shape[0]
+
+        for symbol_idx in range(num_symbols):
+            winning_phase = float(np.real(phi_opt_final[symbol_idx]))
+            print(f"\n--- Analysis for Symbol---")
+            print(f"WINNING PHASE: {winning_phase:.4f} rad")
+            print("Comparison of all candidate phases:")
+            print("  Phase (rad)  | Peak Magnitude")
+            print("---------------------------------")
+            
+            magnitudes_for_symbol = peak_mags_final[symbol_idx]
+
+            for i in range(K_PHIS):
+                candidate_phase = float(np.real(phis_np[i]))
+                magnitude = float(magnitudes_for_symbol[i])
+                marker = "<-- WINNER" if np.isclose(candidate_phase, winning_phase) else ""
+                print(f"  {candidate_phase:<12.4f} | {magnitude:.4f} {marker}")
+
+    folded = a + b * xp.exp(1j * phi_opt[..., None])
     return folded
 
 
@@ -52,45 +71,33 @@ class _FoldSpec:
     """
     Encapsulates oversampling-folding strategies used in FFT-based 
     LoRa demodulation to combine phase-aligned chips.
-
-    Supported modes:
-    - '0FPA': Naive folding (no phase alignment).
-    - 'FPA':  Fine- Grained Phase Alignment (FPA) folding.
-    - 'CPA':  Coarse Phase Alignment (CPA) folding, using absolute values.
-
-    :param mode: Folding mode, one of '0FPA', 'FPA', or 'CPA'.
-    :type mode: str
-    :param spc: Samples per chip (oversampling factor).
-    :type spc: int
-    :param chips: Number of chips per symbol.
-    :type chips: int
     """
-    mode: str
+    mode: LoRaFoldMode
     spc: int
     chips: int
+    padding: int
 
-    def build(self, xp):
+    def build(self, xp, debug):
         """
         Returns a folding function according to the selected strategy.
-
-        :param xp: NumPy or CuPy module (for CPU/GPU compatibility).
-        :type xp: module
-        :return: A callable that applies the chosen folding method to an FFT array.
-        :rtype: Callable[[xp.ndarray], xp.ndarray]
         """
+        # Effective bandwidth bins after padding
+        bw_bins = self.chips * self.padding
+        
         if self.spc == 1:
-            return lambda fft_: fft_[..., :self.chips]
+            return lambda fft_: fft_[..., :bw_bins]
 
-        first = slice(0, self.chips)
-        last  = slice((self.spc - 1) * self.chips, self.spc * self.chips)
+        first = slice(0, bw_bins)
+        # Grab the alias from the end of the spectrum (negative indexing handles the total length)
+        last  = slice(-bw_bins, None) 
 
-        if self.mode == "0FPA":
+        if self.mode == LoRaFoldMode.OPA:
             return lambda fft_: fft_[..., first] + fft_[..., last]
 
-        if self.mode == "FPA":
-            return lambda fft_: fold_fpa(xp, fft_, first, last)
+        if self.mode == LoRaFoldMode.FPA:
+            return lambda fft_: fold_fpa(xp, fft_, first, last, debug)
 
-        if self.mode == "CPA":
+        if self.mode == LoRaFoldMode.CPA:
             return lambda fft_: xp.abs(fft_[..., first]) + xp.abs(fft_[..., last])
 
         raise ValueError(f"Unknown folding mode: {self.mode!r}")
@@ -99,12 +106,6 @@ class _FoldSpec:
 class LoRaDemodulator:
     """
     Unified GPU/CPU LoRa demodulator.
-
-    :param phy_params: LoRaPhyParams
-    :param backend: "auto" | "numpy" | "cupy" | AbstractBackend
-    :param fold_mode: "0FPA" or "CPA"
-    :param safe: If True, move NumPy → GPU and cast to complex64 automatically
-    :param return_peaks: If True, also return peak magnitude array
     """
 
     # ------------------------- construction -----------------------------
@@ -112,8 +113,9 @@ class LoRaDemodulator:
                  phy_params: LoRaPhyParams,
                  *,
                  backend: str | AbstractBackend = "auto",
-                 fold_mode: str = "0FPA",
-                 safe: bool = True
+                 fold_mode: LoRaFoldMode = LoRaFoldMode.OPA,
+                 safe: bool = True,
+                 debug_fpa: bool = False
                 ):
 
         self.backend: AbstractBackend = (
@@ -123,166 +125,123 @@ class LoRaDemodulator:
         self.xp = self.backend.xp
         self.phy_params = phy_params
         self.safe = safe
+        self.fold_mode = fold_mode
+        self.debug_fpa = debug_fpa
 
         # --- constants --------------------------------------------------
         self.chips   = 1 << phy_params.spreading_factor
         self.sym_len = self.chips * phy_params.samples_per_chip
-        self._fold   = _FoldSpec(fold_mode, phy_params.samples_per_chip,
-                                 self.chips).build(self.xp)
 
         # reference chirps on this backend
         self._ref: dict[str, Any] = {}
         self._get_base("downchirp")   # pre-cache
 
-
-    # ------------------------- public API -------------------------------
     def demodulate(self,
-                   buf,
-                   *,
-                   base: str | LoRaMarkers = "downchirp",
-                   return_items: list[str] = ["symbols"]
-                   ) -> tuple:
-        """
-        Demodulate a complex baseband waveform into LoRa symbol indices.
+                    buf,
+                    *,
+                    base: str | LoRaMarkers = "downchirp",
+                    padding: int = 1,
+                    return_items: list[str] = ["symbols"]
+                    ) -> tuple:
+            """
+            Demodulate a complex baseband waveform into LoRa symbol indices.
+            """
+            ALLOWED = {"symbols", "peaks", "folded", "deltas", "viz_bundle"}
+            if not set(return_items).issubset(ALLOWED):
+                raise ValueError(f"Invalid return_items: {return_items}")
 
-        This function processes a time-domain buffer of I/Q samples and extracts
-        the corresponding LoRa symbols. Internally, it performs dechirping, FFT,
-        and magnitude folding using the specified backend (NumPy or CuPy).
+            mat, orig_ndim = self._prepare(buf)               # shape (..., sym, samp)
+            dech = self._dechirp(mat, base)                   # elementwise *
+            
+            fft_len = self.sym_len * padding
+            fft  = self.backend.fft(dech, n=fft_len, axis=-1)
+            
+            # Build folding strategy dynamically based on padding
+            fold_fn = _FoldSpec(
+                mode=self.fold_mode,
+                spc=self.phy_params.samples_per_chip,
+                chips=self.chips,
+                padding=padding
+            ).build(self.xp, self.debug_fpa)
+            
+            folded = fold_fn(fft)                               # shape (..., sym, chips*padding)
+            mag   = self.xp.abs(folded)                         # shape (..., sym, chips*padding)
+            
+            raw_idx = self.xp.argmax(mag, axis=-1)              # (..., sym) [INTEGER]
 
-        :param buf: Input buffer containing I/Q samples, can be a NumPy or CuPy array.
-        :type buf: Array-like
-        :param base: Reference chirp to use for dechirping, can be a string
-                    ("downchirp", "upchirp") or a LoRaMarkers instance.
-        :type base: str | LoRaMarkers
-        :param return_items: List of items to return, can include:
-            - "symbols": Demodulated symbol indices.
-            - "peaks": Peak magnitudes of the folded FFT.
-            - "folded": Folded FFT magnitudes.
-            - "deltas": Delta values for peak detection.
-            - "viz_bundle": Visualization bundle with all intermediate results.
-        :type return_items: list[str]
-        :return: Tuple containing requested items or at least the symbols.
-        """
-        ALLOWED = {"symbols", "peaks", "folded", "deltas", "viz_bundle"}
-        if not set(return_items).issubset(ALLOWED):
-            raise ValueError(f"Invalid return_items: {return_items}")
+            actual_sym_val = self.xp.round(raw_idx / padding).astype(int)
 
-        mat, orig_ndim = self._prepare(buf)               # shape (..., sym, samp)
-        dech = self._dechirp(mat, base)                   # elementwise *
-        fft  = self.backend.fft(dech, axis=-1)
-        folded = self._fold(fft)                            # shape (..., sym, chips)
-        mag   = self.xp.abs(folded)                         # shape (..., sym, chips)
-        idx   = self.xp.argmax(mag, axis=-1)                # (..., sym)
+            symbols_out = self._maybe_squeeze(actual_sym_val, orig_ndim)
+            out = [symbols_out]
 
-        symbols_out = self._maybe_squeeze(idx, orig_ndim)
+            if "peaks" in return_items:
+                peaks = self.xp.take_along_axis(mag, raw_idx[..., None], axis=-1).squeeze(-1)
+                peaks_out = self._maybe_squeeze(peaks, orig_ndim)
+                out.append(peaks_out)
+            
+            if "folded" in return_items:
+                folded_out = self._maybe_squeeze(mag, orig_ndim)
+                out.append(folded_out)
 
-        out = [symbols_out]
+            if "deltas" in return_items:
+                idx_l = (raw_idx - 1) % mag.shape[-1]
+                idx_r = (raw_idx + 1) % mag.shape[-1]
+                
+                mag_l = self.xp.take_along_axis(mag, idx_l[..., None], axis=-1).squeeze(-1)
+                mag_c = self.xp.take_along_axis(mag, raw_idx[..., None], axis=-1).squeeze(-1) 
+                mag_r = self.xp.take_along_axis(mag, idx_r[..., None], axis=-1).squeeze(-1)
+                
+                denom = (mag_l - 2 * mag_c + mag_r)
+                denom_safe = self.xp.where(self.xp.abs(denom) < 1e-12, self.xp.nan, denom)
+                
+                # Delta in units of "padded bins"
+                delta_padded_bins = 0.5 * (mag_l - mag_r) / denom_safe
+                
+                delta_syms = delta_padded_bins / padding
 
-        if "peaks" in return_items:
-            peaks = self.xp.take_along_axis(mag, idx[..., None], axis=-1).squeeze(-1)
-            peaks_out = self._maybe_squeeze(peaks, orig_ndim)
-            out.append(peaks_out)
-        
-        if "folded" in return_items:
-            folded_out = self._maybe_squeeze(mag, orig_ndim)
-            out.append(folded_out)
+                deltas = self._maybe_squeeze(delta_syms, orig_ndim)
+                out.append(deltas)
 
-        if "deltas" in return_items:
-            idx_l = (idx-1) % mag.shape[-1]  # left neighbor
-            idx_r = (idx+1) % mag.shape[-1]  # right neighbor
-            mag_l = self.xp.take_along_axis(mag, idx_l[..., None], axis=-1).squeeze(-1)
-            mag_c = self.xp.take_along_axis(mag, idx[..., None], axis=-1).squeeze(-1)
-            mag_r = self.xp.take_along_axis(mag, idx_r[..., None], axis=-1).squeeze(-1)
-            denom = (mag_l - 2 * mag_c + mag_r)
-            denom_safe = self.xp.where(self.xp.abs(denom) < 1e-12, self.xp.nan, denom)
-            deltas = 0.5 * (mag_l - mag_r) / denom_safe
-            deltas = self._maybe_squeeze(deltas, orig_ndim)
-            out.append(deltas)
+            if "viz_bundle" in return_items:
+                peaks = self.xp.take_along_axis(mag, raw_idx[..., None], axis=-1).squeeze(-1)
+                peaks_out = self._maybe_squeeze(peaks, orig_ndim)
+                mag_out = mag.reshape(-1, mag.shape[-1])
+                debug = {
+                    "phy_params": self.phy_params,
+                    "padding": padding,
+                    "modulated_symbols": buf.get() if hasattr(buf, "get") else buf,
+                    "demodulated_symbols": symbols_out.get() if hasattr(symbols_out, "get") else symbols_out,
+                    "peak_magnitudes": peaks_out.get() if hasattr(peaks_out, "get") else peaks_out,
+                    "folded_mag_fft": mag_out.get() if hasattr(mag_out, "get") else mag_out
+                }
+                out.append(debug)
 
-        
-        if "viz_bundle" in return_items:
-            peaks = self.xp.take_along_axis(mag, idx[..., None], axis=-1).squeeze(-1)
-            peaks_out = self._maybe_squeeze(peaks, orig_ndim)
-            mag_out = mag.reshape(-1, mag.shape[-1])
-            debug = {
-                "phy_params": self.phy_params,
-                "modulated_symbols": buf.get() if hasattr(buf, "get") else buf,
-                "demodulated_symbols": symbols_out.get() if hasattr(symbols_out, "get") else symbols_out,
-                "peak_magnitudes": peaks_out.get() if hasattr(peaks_out, "get") else peaks_out,
-                "folded_mag_fft": mag_out.get() if hasattr(mag_out, "get") else mag_out
-            }
-            out.append(debug)
-
-        return tuple(out) if len(out) > 1 else out[0]
+            return tuple(out) if len(out) > 1 else out[0]
 
     # ------------------------- helpers ---------------------------------
     def _prepare(self, buf):
-        """
-        Cast/reshape to (..., symbols, samples).
-        
-        This function ensures the input buffer is in the correct format for demodulation.
-        It checks the data type, reshapes it to ensure the last dimension matches the symbol length,
-        and returns the reshaped matrix along with the original number of dimensions.
-
-        :param buf: Input buffer containing I/Q samples.
-        :type buf: Array-like
-
-        :return: matrix of shape (..., symbols, samples) and original number of dimensions.
-        :rtype: Tuple[Array, int]
-        """
         xp = self.xp
         import numpy as np
 
         if self.safe and isinstance(buf, np.ndarray):
-            buf = xp.asarray(buf)      # move host→device if needed
+            buf = xp.asarray(buf)
         if buf.dtype != xp.complex64:
             buf = buf.astype(xp.complex64, copy=False)
         if buf.strides[-1] != buf.itemsize:
             buf = xp.ascontiguousarray(buf)
 
-        # reshape so that last dim is sym_len
         base_shape = buf.shape
         if base_shape[-1] % self.sym_len:
             raise ValueError("buffer length not multiple of symbol length")
         new_tail = (-1, self.sym_len)
         mat = buf.reshape(*base_shape[:-1], *new_tail)
-        return mat, buf.ndim          # keep original ndim for squeeze
+        return mat, buf.ndim
 
     def _dechirp(self, mat, base_key):
-        """
-        Multiply with reference chirp (broadcast).
-        
-        This function applies the dechirping operation by multiplying the input matrix
-        with the reference chirp corresponding to the specified base key. The chirp is
-        retrieved or generated if it does not already exist in the reference dictionary.
-
-        :param mat: Input matrix of shape (..., symbols, samples).
-        :type mat: Array-like
-        :param base_key: Key to identify the reference chirp, can be a string or LoRaMarkers.
-        :type base_key: str or LoRaMarkers
-
-        :return: Dechirped matrix of shape (..., symbols, samples).
-        :rtype: Array
-        
-        """
         base = self._get_base(base_key)[None, None, :]
         return mat * base
 
     def _get_base(self, key):
-        """
-        Get or generate the base chirp for the given key.
-        
-        This function retrieves the reference chirp from the internal dictionary or generates it
-        if it does not exist. The chirp is generated based on the specified slope and duration
-        factor, which can be derived from the key if it is a `LoRaMarkers` instance or a string
-        indicating a standard chirp type.
-
-        :param key: Key to identify the reference chirp, can be a string or LoRaMarkers.
-        :type key: str or LoRaMarkers
-
-        :return: Reference chirp array.
-        :rtype: Array
-        """
         if key not in self._ref:
             if isinstance(key, LoRaMarkers):
                 slope = key.slope_sign
@@ -300,12 +259,10 @@ class LoRaDemodulator:
         return self._ref[key]
 
     def _maybe_squeeze(self, arr, orig_ndim):
-        """Return 1-D if caller provided 1-D; maintain leading dims otherwise."""
         if orig_ndim == 1:
             return arr.reshape(-1)
         return arr
 
-    # ------------------------- repr ------------------------------------
     def __repr__(self):
         return (f"<LoRaDemodulator backend={self.backend.name} "
                 f"SF={self.phy_params.spreading_factor} BW={self.phy_params.bandwidth/1e3:.0f}k "

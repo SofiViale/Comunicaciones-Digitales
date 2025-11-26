@@ -6,10 +6,24 @@ Immutable physical-layer parameters shared by TX/RX blocks.
 """
 from __future__ import annotations
 
+from enum import Enum
+from typing import Union
 from dataclasses import dataclass, field
 from warnings import warn
 
 __all__ = ["LoRaParams"]
+
+
+class LoRaFoldMode(str, Enum):
+    """
+    Enum for LoRa folding modes.
+    """
+    OPA = "opa"
+    FPA = "fpa"
+    CPA = "cpa"
+
+    def __str__(self) -> str:
+        return self.value
 
 
 @dataclass(slots=True) # Inmutable and memory-efficient
@@ -183,3 +197,107 @@ class LoRaFrameParams:
             SFD_LENGTH=data.get("SFD_LENGTH", 2.25),
             HEADER_LENGTH=data.get("HEADER_LENGTH", 2)
         )
+    
+class SyncSource(Enum):
+    DECHIRPING = "Dechirping"
+    CROSS_CORRELATION = "CrossCorrelation"
+
+@dataclass(slots=True)
+class DechirpingSyncParams:
+    """
+    Parameters for Dechirping-based synchronization.
+    """
+    max_sync_candidates: int = 10
+    compensate_frequency_offset: bool = True
+
+    def __post_init__(self) -> None:
+        if self.max_sync_candidates <= 0:
+            raise ValueError("max_sync_candidates must be positive")
+    
+    def to_dict(self) -> dict:
+        """Return a dictionary representation of the sync parameters."""
+        return {
+            "max_sync_candidates": self.max_sync_candidates,
+            "compensate_frequency_offset": self.compensate_frequency_offset
+        }
+    
+    @staticmethod
+    def from_dict(data: dict) -> DechirpingSyncParams:
+        """Create a DechirpingSyncParams instance from a dictionary."""
+        return DechirpingSyncParams(
+            max_sync_candidates=data["max_sync_candidates"],
+            compensate_frequency_offset=data["compensate_frequency_offset"]
+        )
+
+@dataclass(slots=True)
+class CorrelationSyncParams:
+    """
+    Parameters for Correlation-based synchronization.
+    """
+    correlation_threshold: float = 0.9
+
+    def __post_init__(self) -> None:
+        if not (0.0 < self.correlation_threshold < 1.0):
+            raise ValueError("correlation_threshold must be in the range (0.0, 1.0)")
+        
+    def to_dict(self) -> dict:
+        """Return a dictionary representation of the sync parameters."""
+        return {
+            "correlation_threshold": self.correlation_threshold
+        }
+    
+    @staticmethod
+    def from_dict(data: dict) -> CorrelationSyncParams:
+        """Create a CorrelationSyncParams instance from a dictionary."""
+        return CorrelationSyncParams(
+            correlation_threshold=data["correlation_threshold"]
+        )
+
+@dataclass(slots=True)
+class LoRaSyncParams:
+    """
+    LoRa synchronization parameters.
+
+    :param sync_source: Source of synchronization ('Dechirping' or 'CrossCorrelation').
+    :type  sync_source: Enum class SyncSource
+    :param source_params: Parameters specific to the synchronization source.
+    :type  source_params: Union[DechirpingSyncParams, CorrelationSyncParams]
+    """
+
+    sync_source: SyncSource
+    source_params: Union[DechirpingSyncParams, CorrelationSyncParams]
+
+    def __post_init__(self) -> None:
+        if self.sync_source == SyncSource.DECHIRPING:
+            if not isinstance(self.source_params, DechirpingSyncParams):
+                raise TypeError("source_params must be of type DechirpingSyncParams for Dechirping sync_source")
+        elif self.sync_source == SyncSource.CROSS_CORRELATION:
+            if not isinstance(self.source_params, CorrelationSyncParams):
+                raise TypeError("source_params must be of type CorrelationSyncParams for CrossCorrelation sync_source")
+        else:
+            raise ValueError("Invalid sync_source value")
+        
+    def to_dict(self) -> dict:
+        """Return a dictionary representation of the sync parameters."""
+        return {
+            "sync_source": self.sync_source.value,
+            "source_params": self.source_params.to_dict()
+        }
+    
+    @staticmethod
+    def from_dict(data: dict) -> LoRaSyncParams:
+        """Create a LoRaSyncParams instance from a dictionary."""
+        sync_source = SyncSource(data["sync_source"])
+        if sync_source == SyncSource.DECHIRPING:
+            source_params = DechirpingSyncParams.from_dict(data["source_params"])
+        elif sync_source == SyncSource.CROSS_CORRELATION:
+            source_params = CorrelationSyncParams.from_dict(data["source_params"])
+        else:
+            raise ValueError("Invalid sync_source value in dictionary")
+        
+        return LoRaSyncParams(
+            sync_source=sync_source,
+            source_params=source_params
+        )
+
+
