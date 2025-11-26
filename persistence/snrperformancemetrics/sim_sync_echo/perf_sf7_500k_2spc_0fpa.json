@@ -1,0 +1,219 @@
+{
+  "profile": {
+    "name": "[LoRa-SIM]-SF7-500kHz-2SPC-0FPA",
+    "phy_params": {
+      "spreading_factor": 7,
+      "bandwidth": 500000.0,
+      "samples_per_chip": 2
+    },
+    "frame_params": {
+      "preamble_symbol_count": 8,
+      "explicit_header": true,
+      "sync_word": 0,
+      "SYNC_WORD_LENGTH": 2,
+      "SFD_LENGTH": 2.25,
+      "HEADER_LENGTH": 2,
+      "SYNC_SECTION_LENGTH": 14.25
+    },
+    "fold_mode": "0FPA",
+    "tx_sdr_params": null,
+    "rx_sdr_params": null,
+    "snr_map": [],
+    "timestamp": "2025-07-26"
+  },
+  "channel_function": "sim_channel_sync_echo",
+  "snr_points": [
+    {
+      "snr_db": -18.0,
+      "ber": null,
+      "ser": null,
+      "fer": {
+        "event_count": 401,
+        "total_trial_count": 401,
+        "p_hat": 1.0,
+        "ci_low": 0.9905112020100799,
+        "ci_high": 1.0,
+        "rel_half_width": 0.004744398994960042,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -16.0,
+      "ber": null,
+      "ser": null,
+      "fer": {
+        "event_count": 401,
+        "total_trial_count": 401,
+        "p_hat": 1.0,
+        "ci_low": 0.9905112020100799,
+        "ci_high": 1.0,
+        "rel_half_width": 0.004744398994960042,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -14.0,
+      "ber": null,
+      "ser": null,
+      "fer": {
+        "event_count": 401,
+        "total_trial_count": 401,
+        "p_hat": 1.0,
+        "ci_low": 0.9905112020100799,
+        "ci_high": 1.0,
+        "rel_half_width": 0.004744398994960042,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -12.0,
+      "ber": {
+        "event_count": 19614,
+        "total_trial_count": 142310,
+        "p_hat": 0.13782587309394984,
+        "ci_low": 0.13604465633260665,
+        "ci_high": 0.1396266420925199,
+        "rel_half_width": 0.012994605727879449,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 5686,
+        "total_trial_count": 20330,
+        "p_hat": 0.27968519429414657,
+        "ci_low": 0.273557398465,
+        "ci_high": 0.28589623364178146,
+        "rel_half_width": 0.02205843467674704,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 391,
+        "total_trial_count": 401,
+        "p_hat": 0.9750623441396509,
+        "ci_low": 0.9547100975885934,
+        "ci_high": 0.9863990494583903,
+        "rel_half_width": 0.01624970549845085,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -10.0,
+      "ber": {
+        "event_count": 93942,
+        "total_trial_count": 2661197,
+        "p_hat": 0.03530065605815729,
+        "ci_low": 0.03507961003866337,
+        "ci_high": 0.03552304367003759,
+        "rel_half_width": 0.006280812892594314,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 28004,
+        "total_trial_count": 380171,
+        "p_hat": 0.07366158912699812,
+        "ci_low": 0.07283553473589677,
+        "ci_high": 0.07449625935097659,
+        "rel_half_width": 0.011272663505918998,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 214,
+        "total_trial_count": 401,
+        "p_hat": 0.5336658354114713,
+        "ci_low": 0.48475063573816296,
+        "ci_high": 0.581942138462017,
+        "rel_half_width": 0.09106026306604086,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -8.0,
+      "ber": {
+        "event_count": 75334,
+        "total_trial_count": 26839666,
+        "p_hat": 0.0028068158523284156,
+        "ci_low": 0.0027868718630714947,
+        "ci_high": 0.0028269021642855874,
+        "rel_half_width": 0.007130909778225247,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 24331,
+        "total_trial_count": 3834238,
+        "p_hat": 0.00634571980143121,
+        "ci_low": 0.00626673127565324,
+        "ci_high": 0.006425697494125329,
+        "rel_half_width": 0.012525467830791724,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 114,
+        "total_trial_count": 2000,
+        "p_hat": 0.057,
+        "ci_low": 0.04766276887822958,
+        "ci_high": 0.06803573501296051,
+        "rel_half_width": 0.17871022925202568,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -6.0,
+      "ber": {
+        "event_count": 1467,
+        "total_trial_count": 28390845,
+        "p_hat": 5.167158638638618e-05,
+        "ci_low": 4.90942934827468e-05,
+        "ci_high": 5.438417154048276e-05,
+        "rel_half_width": 0.05118749420793547,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 640,
+        "total_trial_count": 4055835,
+        "p_hat": 0.0001577973462924404,
+        "ci_low": 0.0001460373233250672,
+        "ci_high": 0.00017050421321165502,
+        "rel_half_width": 0.0775263033931007,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 5,
+        "total_trial_count": 2000,
+        "p_hat": 0.0025,
+        "ci_low": 0.0010683087284139147,
+        "ci_high": 0.005839153316432754,
+        "rel_half_width": 0.9541689176037678,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -4.0,
+      "ber": {
+        "event_count": 6,
+        "total_trial_count": 28462000,
+        "p_hat": 2.108073923125571e-07,
+        "ci_low": 9.661492223479717e-08,
+        "ci_high": 4.599677733805713e-07,
+        "rel_half_width": 0.8618124041092519,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 2,
+        "total_trial_count": 4066000,
+        "p_hat": 4.918839153959665e-07,
+        "ci_low": 1.348923217896892e-07,
+        "ci_high": 1.7936495897400168e-06,
+        "rel_half_width": 1.6861267628715082,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 0,
+        "total_trial_count": 2000,
+        "p_hat": 0.0,
+        "ci_low": 1.0842021724855044e-19,
+        "ci_high": 0.0019170472812529331,
+        "rel_half_width": 1.917047281252933,
+        "conf_level": 0.95
+      }
+    }
+  ]
+}

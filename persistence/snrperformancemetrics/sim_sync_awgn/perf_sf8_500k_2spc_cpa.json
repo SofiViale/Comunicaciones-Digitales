@@ -1,0 +1,251 @@
+{
+  "profile": {
+    "name": "[LoRa-SIM]-SF8-500kHz-2SPC-CPA",
+    "phy_params": {
+      "spreading_factor": 8,
+      "bandwidth": 500000.0,
+      "samples_per_chip": 2
+    },
+    "frame_params": {
+      "preamble_symbol_count": 8,
+      "explicit_header": true,
+      "sync_word": 0,
+      "SYNC_WORD_LENGTH": 2,
+      "SFD_LENGTH": 2.25,
+      "HEADER_LENGTH": 2,
+      "SYNC_SECTION_LENGTH": 14.25
+    },
+    "fold_mode": "CPA",
+    "tx_sdr_params": null,
+    "rx_sdr_params": null,
+    "snr_map": [],
+    "timestamp": "2025-07-26"
+  },
+  "channel_function": "sim_channel_sync_roll",
+  "snr_points": [
+    {
+      "snr_db": -18.0,
+      "ber": null,
+      "ser": null,
+      "fer": {
+        "event_count": 401,
+        "total_trial_count": 401,
+        "p_hat": 1.0,
+        "ci_low": 0.9905112020100799,
+        "ci_high": 1.0,
+        "rel_half_width": 0.004744398994960042,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -16.0,
+      "ber": {
+        "event_count": 17622,
+        "total_trial_count": 80720,
+        "p_hat": 0.21831020812685828,
+        "ci_low": 0.21547386659433013,
+        "ci_high": 0.22117335957616283,
+        "rel_half_width": 0.013053656608033579,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 4717,
+        "total_trial_count": 10090,
+        "p_hat": 0.46749256689791874,
+        "ci_low": 0.45777140789048626,
+        "ci_high": 0.47723846890654403,
+        "rel_half_width": 0.020820717156245807,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 391,
+        "total_trial_count": 401,
+        "p_hat": 0.9750623441396509,
+        "ci_low": 0.9547100975885934,
+        "ci_high": 0.9863990494583903,
+        "rel_half_width": 0.01624970549845085,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -14.0,
+      "ber": {
+        "event_count": 66567,
+        "total_trial_count": 839488,
+        "p_hat": 0.07929476061599451,
+        "ci_low": 0.07871868976104422,
+        "ci_high": 0.07987468170932217,
+        "rel_half_width": 0.007289207630477269,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 20045,
+        "total_trial_count": 104936,
+        "p_hat": 0.19102119387054967,
+        "ci_low": 0.18865406471783244,
+        "ci_high": 0.1934109441620778,
+        "rel_half_width": 0.012451182373692455,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 297,
+        "total_trial_count": 401,
+        "p_hat": 0.7406483790523691,
+        "ci_low": 0.6956109466182769,
+        "ci_high": 0.781118883775602,
+        "rel_half_width": 0.05772505521900228,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -12.0,
+      "ber": {
+        "event_count": 169117,
+        "total_trial_count": 9912416,
+        "p_hat": 0.017061128185096346,
+        "ci_low": 0.01698069835943391,
+        "ci_high": 0.017141932326984015,
+        "rel_half_width": 0.004725184811956083,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 69704,
+        "total_trial_count": 1239052,
+        "p_hat": 0.05625591177771393,
+        "ci_low": 0.0558515769229248,
+        "ci_high": 0.05666299812212088,
+        "rel_half_width": 0.007211874926161375,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 307,
+        "total_trial_count": 1535,
+        "p_hat": 0.2,
+        "ci_low": 0.18074955120363898,
+        "ci_high": 0.22074824785759947,
+        "rel_half_width": 0.09999674163490124,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -10.0,
+      "ber": {
+        "event_count": 68875,
+        "total_trial_count": 14933200,
+        "p_hat": 0.004612206358985348,
+        "ci_low": 0.00457796810133634,
+        "ci_high": 0.004646699486497482,
+        "rel_half_width": 0.007451031004634182,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 34146,
+        "total_trial_count": 1866650,
+        "p_hat": 0.018292663327351136,
+        "ci_low": 0.01810141124203333,
+        "ci_high": 0.018485898060824006,
+        "rel_half_width": 0.010509317640362241,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 150,
+        "total_trial_count": 2000,
+        "p_hat": 0.075,
+        "ci_low": 0.0642536480572273,
+        "ci_high": 0.08737584213183769,
+        "rel_half_width": 0.1541479604974026,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -8.0,
+      "ber": {
+        "event_count": 19150,
+        "total_trial_count": 15909912,
+        "p_hat": 0.001203652163506624,
+        "ci_low": 0.0011867347802427938,
+        "ci_high": 0.0012208104161313255,
+        "rel_half_width": 0.01415510100079845,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 9653,
+        "total_trial_count": 1988739,
+        "p_hat": 0.004853829486926138,
+        "ci_low": 0.004758188440079847,
+        "ci_high": 0.004951383384025963,
+        "rel_half_width": 0.019901290771182824,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 29,
+        "total_trial_count": 2000,
+        "p_hat": 0.0145,
+        "ci_low": 0.01011467734679028,
+        "ci_high": 0.020746775563306317,
+        "rel_half_width": 0.36662407643158745,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -6.0,
+      "ber": {
+        "event_count": 2800,
+        "total_trial_count": 16111712,
+        "p_hat": 0.0001737866218065467,
+        "ci_low": 0.0001674682222961542,
+        "ci_high": 0.0001803433648720378,
+        "rel_half_width": 0.037042962346709715,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 1397,
+        "total_trial_count": 2013964,
+        "p_hat": 0.0006936568876107021,
+        "ci_low": 0.000658235155417792,
+        "ci_high": 0.0007309833818524326,
+        "rel_half_width": 0.052438192234507734,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 4,
+        "total_trial_count": 2000,
+        "p_hat": 0.002,
+        "ci_low": 0.000778027307051057,
+        "ci_high": 0.005131351785076864,
+        "rel_half_width": 1.0883311195064518,
+        "conf_level": 0.95
+      }
+    },
+    {
+      "snr_db": -4.0,
+      "ber": {
+        "event_count": 138,
+        "total_trial_count": 16135928,
+        "p_hat": 8.552343565241491e-06,
+        "ci_low": 7.239525355535453e-06,
+        "ci_high": 1.0103226310140536e-05,
+        "rel_half_width": 0.16742200151101042,
+        "conf_level": 0.95
+      },
+      "ser": {
+        "event_count": 72,
+        "total_trial_count": 2016991,
+        "p_hat": 3.569673835926883e-05,
+        "ci_low": 2.8348922962681546e-05,
+        "ci_high": 4.494896346808674e-05,
+        "rel_half_width": 0.23251480763220647,
+        "conf_level": 0.95
+      },
+      "fer": {
+        "event_count": 1,
+        "total_trial_count": 2000,
+        "p_hat": 0.0005,
+        "ci_low": 8.826773070546787e-05,
+        "ci_high": 0.0028268625032662124,
+        "rel_half_width": 2.7385947725607447,
+        "conf_level": 0.95
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "[LoRa-SIM]-SF8-500kHz-2SPC-0FPA",
+  "phy_params": {
+    "spreading_factor": 8,
+    "bandwidth": 500000.0,
+    "samples_per_chip": 2
+  },
+  "frame_params": {
+    "preamble_symbol_count": 8,
+    "explicit_header": true,
+    "sync_word": 0,
+    "SYNC_WORD_LENGTH": 2,
+    "SFD_LENGTH": 2.25,
+    "HEADER_LENGTH": 2,
+    "SYNC_SECTION_LENGTH": 14.25
+  },
+  "fold_mode": "0FPA",
+  "tx_sdr_params": null,
+  "rx_sdr_params": null,
+  "snr_map": [],
+  "timestamp": "2025-07-26"
+}
